@@ -7,27 +7,27 @@ class particleFilter(object):
     def __init__(self, dt):
         self.show_animation = True
         self.dt = dt
-        self.pmin = 5
-        self.pmax = 10
-        #weight is going ot be out of 100. pruned when weight goes below 3.
-        self.prune_weight = 3
+        self.pmin = 10
+        self.pmax = 20
         self.particles = []
         self.particle_weights =[]
         self.hpx = []
         self.hpy = []
+        self.off = []
         for i in range(0,self.pmax):
             self.hpx.append([])
             self.hpy.append([])
+            self.off.append(0)
             self.particles.append(np.zeros((4,1)))
-            self.particle_weights.append(10)
-        self.num_particles = 10
+            self.particle_weights.append(5)
+        self.num_particles = self.pmax
         self.weights = np.array([0.4, 0.4, 0.2])
 
     
     def update(self, u, obs, htx, hty):
         #first, update the motion model
         for i in range(0, self.num_particles):
-            myu = np.array([[u[0,0]+np.random.normal(0,0.00)], [u[1,0]+np.random.normal(0,0.05)]])
+            myu = np.array([[u[0,0]+np.random.normal(0,0.05)], [u[1,0]+np.random.normal(0,0.05)]])
             self.particles[i] = self.motion_model(self.particles[i], myu)
             self.hpx[i].append(self.particles[i][0,0])
             self.hpy[i].append(self.particles[i][1,0])
@@ -40,9 +40,13 @@ class particleFilter(object):
             self.repopulate()
         #then, return final value.
         state = np.zeros((4,1))
+        total = 0
+        for i in range(0,self.num_particles):
+            total = total+self.particle_weights[i]
         for i in range(0,self.num_particles):
             for j in range(0,4):
-                state[j,0] = state[j,0]+self.particles[i][j,0]*self.particle_weights[i]
+
+                state[j,0] = state[j,0]+self.particles[i][j,0]*100*self.particle_weights[i]/total
         for i in range(0,4):
             state[i,0] = state[i,0]/100
         
@@ -52,18 +56,19 @@ class particleFilter(object):
             for i in range(0,self.num_particles):
                 plt.plot(self.hpx[i], self.hpy[i], linewidth = self.particle_weights[i]/10)
             plt.plot(htx, hty, label = 'true position', color = 'k', linewidth = 4.0)
-            plt.pause(0.002)
-
-
+            plt.pause(0.001)
 
         return state
     
 
     def repopulate(self):
+        total = 0
         for i in range(0,self.num_particles):
-            while(self.particle_weights[i]>15):
-                self.particle_weights[i] = self.particle_weights[i]-10
-                self.particle_weights.append(10)
+            total = total+self.particle_weights[i]
+        for i in range(0,self.num_particles):
+            while(self.particle_weights[i]>0.15*total):
+                self.particle_weights[i] = self.particle_weights[i]-0.1*total
+                self.particle_weights.append(0.1*total)
 
                 self.particles.append(np.array([[self.particles[i][0,0]],[self.particles[i][1,0]],[self.particles[i][2,0]],[self.particles[i][3,0]]]))
                 self.hpx.append(self.hpx[i].copy())
@@ -77,13 +82,19 @@ class particleFilter(object):
                 total_error[j,0] = total_error[j,0]+abs(obs[j,0]-self.particles[i][j,0])
         #now we can normalize... just have to use weights to get particle_weights. Want particle weights to add to 100.
         for i in range(0,self.num_particles):
-            self.particle_weights[i] = 100*((abs(obs[0,0]-self.particles[i][0,0])/total_error[0,0])*self.weights[0]+ (abs(obs[1,0]-self.particles[i][1,0])/total_error[1,0])*self.weights[1]+ (abs(obs[2,0]-self.particles[i][2,0])/total_error[2,0])*self.weights[2])
-        
+            self.particle_weights[i] = self.particle_weights[i]+((abs(obs[0,0]-self.particles[i][0,0])/total_error[0,0])*self.weights[0]+ (abs(obs[1,0]-self.particles[i][1,0])/total_error[1,0])*self.weights[1]+ (abs(obs[2,0]-self.particles[i][2,0])/total_error[2,0])*self.weights[2])
 
     def prune(self):
         i = 0
+        total = 0
+        for i in range(0,self.num_particles):
+            total = total+self.particle_weights[i]
+        if(total>100 or total<60):
+            self.normalize(total)
+            total = 100
+        
         while(i<self.num_particles):
-            if(self.particle_weights[i]<self.prune_weight):
+            if(self.particle_weights[i]<0.1*total):
                 self.particle_weights.pop(i)
                 self.particles.pop(i)
                 self.hpx.pop(i)
@@ -92,7 +103,9 @@ class particleFilter(object):
                 self.num_particles = self.num_particles-1
             i = i+1
     
-
+    def normalize(self,total):
+        for i in range(0, self.num_particles):
+            self.particle_weights[i] = 100*self.particle_weights[i]/total
     def motion_model(self, x, u):
         l = 0.5
         tau_0 = 0.09
