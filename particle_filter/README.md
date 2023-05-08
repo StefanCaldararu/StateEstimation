@@ -1,3 +1,4 @@
 Different implementations:
 **particleFilter.py**: v1, demo using 10 particles, repopulation at 5 particles. normal distribution noise in measurements. Takes in GPS and mag measurement, and has no data on how "historically accurate" each particle has been. 
 **particleFilter2.py**: Want to include historical accuracy, as we know the data is in a noral distribution, and what that distribution is. So, will maintain how far off each particle has been in the past, and use that to generate the particle weights. This unfortunately doesn't work as well as predicted, as "bad" particles still stay in the range. Might be better to do a calculation, as to how likely a particle is based on the normal distribution.
+**particleFilter3.py**: Back to v1 (no history), but will use the "likelihood" of this particle, given the normal distribution and the measurement. 

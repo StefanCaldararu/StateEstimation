@@ -74,15 +74,15 @@ class particleFilter(object):
         total_error = np.zeros((3,1))
         for i in range(0,self.num_particles):
             for j in range(0,3):
-                total_error[j,0] = total_error[j,0]+abs(obs[j,0]-self.particles[i][j,0])
+                total_error[j,0] = total_error[j,0]+1/abs(obs[j,0]-self.particles[i][j,0])
         #now we can normalize... just have to use weights to get particle_weights. Want particle weights to add to 100.
         for i in range(0,self.num_particles):
-            self.particle_weights[i] = 100*((abs(obs[0,0]-self.particles[i][0,0])/total_error[0,0])*self.weights[0]+ (abs(obs[1,0]-self.particles[i][1,0])/total_error[1,0])*self.weights[1]+ (abs(obs[2,0]-self.particles[i][2,0])/total_error[2,0])*self.weights[2])
+            self.particle_weights[i] = 100*(((1/abs(obs[0,0]-self.particles[i][0,0]))/total_error[0,0])*self.weights[0]+ ((1/abs(obs[1,0]-self.particles[i][1,0]))/total_error[1,0])*self.weights[1]+ (1/(abs(obs[2,0]-self.particles[i][2,0]))/total_error[2,0])*self.weights[2])
         
 
     def prune(self):
         i = 0
-        while(i<self.num_particles):
+        while(i<self.num_particles and self.num_particles>1):
             if(self.particle_weights[i]<self.prune_weight):
                 self.particle_weights.pop(i)
                 self.particles.pop(i)

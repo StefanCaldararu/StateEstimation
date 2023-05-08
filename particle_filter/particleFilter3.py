@@ -7,10 +7,10 @@ class particleFilter(object):
     def __init__(self, dt):
         self.show_animation = True
         self.dt = dt
-        self.pmin = 5
-        self.pmax = 10
+        self.pmin = 50
+        self.pmax = 100
         #weight is going ot be out of 100. pruned when weight goes below 3.
-        self.prune_weight = 3
+        self.prune_weight = 0.5
         self.particles = []
         self.particle_weights =[]
         self.hpx = []
@@ -19,8 +19,8 @@ class particleFilter(object):
             self.hpx.append([])
             self.hpy.append([])
             self.particles.append(np.zeros((4,1)))
-            self.particle_weights.append(10)
-        self.num_particles = 10
+            self.particle_weights.append(1)
+        self.num_particles = 100
         self.weights = np.array([0.4, 0.4, 0.2])
 
     
@@ -52,7 +52,7 @@ class particleFilter(object):
             for i in range(0,self.num_particles):
                 plt.plot(self.hpx[i], self.hpy[i], linewidth = self.particle_weights[i]/10)
             plt.plot(htx, hty, label = 'true position', color = 'k', linewidth = 4.0)
-            plt.pause(0.002)
+            plt.pause(0.001)
 
 
 
@@ -61,9 +61,9 @@ class particleFilter(object):
 
     def repopulate(self):
         for i in range(0,self.num_particles):
-            while(self.particle_weights[i]>15):
-                self.particle_weights[i] = self.particle_weights[i]-10
-                self.particle_weights.append(10)
+            while(self.particle_weights[i]>2):
+                self.particle_weights[i] = self.particle_weights[i]-2
+                self.particle_weights.append(2)
 
                 self.particles.append(np.array([[self.particles[i][0,0]],[self.particles[i][1,0]],[self.particles[i][2,0]],[self.particles[i][3,0]]]))
                 self.hpx.append(self.hpx[i].copy())
@@ -89,7 +89,7 @@ class particleFilter(object):
 
     def prune(self):
         i = 0
-        while(i<self.num_particles):
+        while(i<self.num_particles and self.num_particles>30):
             if(self.particle_weights[i]<self.prune_weight):
                 self.particle_weights.pop(i)
                 self.particles.pop(i)
@@ -98,6 +98,7 @@ class particleFilter(object):
                 i = i-1
                 self.num_particles = self.num_particles-1
             i = i+1
+        print("NUM_PPARTICLES: " + str(self.num_particles))
     
 
     def motion_model(self, x, u):
