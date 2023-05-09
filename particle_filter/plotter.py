@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import math
-from particleFilter3 import particleFilter
-
+from particleFilter4 import particleFilter
+from randomWalk import randomWalk
 
 
 def main():
@@ -12,6 +12,8 @@ def main():
 
     trueState = np.zeros((4,1))
     pf = particleFilter(dt)
+    xnoise = randomWalk(dt)
+    ynoise = randomWalk(dt)
     htx = []
     hty = []
     hx = []
