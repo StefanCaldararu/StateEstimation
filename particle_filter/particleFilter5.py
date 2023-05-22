@@ -29,17 +29,20 @@ class particleFilter(object):
             self.hpy.append([])
             self.particle_distr_dist.append([])
             self.particle_distr_head.append([])
-            self.particles.append(np.zeros((4,1)))
-            #self.particles.append(np.array([[random.gauss(0,0.8)], [random.gauss(0,0.8)], [0],[0]]))
+            #self.particles.append(np.zeros((4,1)))
+            self.particles.append(np.array([[random.gauss(0,0.8)], [random.gauss(0,0.8)], [0],[0]]))
             self.particle_weights.append(1)
         self.num_particles = self.pmax
+        self.old_np = self.num_particles
         self.weights = np.array([0.4, 0.4, 0.2])
+
+        self.red_weight = (100/(self.pmax*1.1))
 
     
     def update(self, u, obs, htx, hty):
         #first, update the motion model
         for i in range(0, self.num_particles):
-            myu = np.array([[u[0,0]+np.random.normal(0,0.05)], [u[1,0]+np.random.normal(0,0.1)]])
+            myu = np.array([[u[0,0]+np.random.normal(0,0.02)], [u[1,0]+np.random.normal(0,0.02)]])
             self.particles[i] = self.motion_model(self.particles[i], myu)
             self.hpx[i].append(self.particles[i][0,0])
             self.hpy[i].append(self.particles[i][1,0])
@@ -49,8 +52,9 @@ class particleFilter(object):
         #then, prune
         self.prune()
         #then, repopulate as necessary,
-        if(self.num_particles<self.pmin):
-            self.repopulate()
+        #if(self.num_particles<self.pmin):
+        #    self.repopulate()
+        self.repopulate()
         self.normalizeWeights()
         #then, return final value.
         state = np.zeros((4,1))
@@ -74,24 +78,30 @@ class particleFilter(object):
     
     def update_dist(self,obs):
         for i in range(0, self.num_particles):
-            distance = math.sqrt(self.particles[i][0,0]**2+self.particles[i][1,0]**2)
+            distance = math.sqrt((self.particles[i][0,0]-obs[0,0])**2+(self.particles[i][1,0]-obs[1,0])**2)
             self.particle_distr_dist[i].append(distance)
             self.particle_distr_head[i].append(self.particles[i][2,0]-obs[2,0])
-            if(len(self.particle_distr_dist[i])>50):
+            if(len(self.particle_distr_dist[i])>10):
                 self.particle_distr_dist[i].pop(0)
                 self.particle_distr_head[i].pop(0)
             
 
     def repopulate(self):
-        red_weight = (100/(self.pmax))
+        if(self.num_particles == self.old_np):
+            self.red_weight = self.red_weight*0.95
+        else:
+            self.red_weight = (100/(self.pmax*1.1))
+            self.old_np = self.num_particles
+            
         for i in range(0,self.num_particles):
-            while(self.particle_weights[i]>red_weight):
-                self.particle_weights[i] = self.particle_weights[i]-red_weight
-                self.particle_weights.append(red_weight)
+            while(self.particle_weights[i]>self.red_weight):
+                self.particle_weights[i] = self.particle_weights[i]-self.red_weight/2
+                self.particle_weights.append(self.red_weight/2)
                 self.particle_distr_dist.append(self.particle_distr_dist[i].copy())
                 self.particle_distr_head.append(self.particle_distr_head[i].copy())
+                
 
-                self.particles.append(np.array([[self.particles[i][0,0]],[self.particles[i][1,0]],[self.particles[i][2,0]],[self.particles[i][3,0]]]))
+                self.particles.append(np.array([[self.particles[i][0,0]+random.gauss(0,0.1)],[self.particles[i][1,0]+random.gauss(0,0.1)],[self.particles[i][2,0]],[self.particles[i][3,0]]]))
                 self.hpx.append(self.hpx[i].copy())
                 self.hpy.append(self.hpy[i].copy())
                 self.num_particles = self.num_particles+1
@@ -114,9 +124,9 @@ class particleFilter(object):
 
     def prune(self):
         i = 0
-        self.prune_weight = 90/self.num_particles
+        self.prune_weight = 50/self.pmax
 
-        while(i<self.num_particles and self.num_particles>30):
+        while(i<self.num_particles and self.num_particles>self.pmin*0.9):
             if(self.particle_weights[i]<self.prune_weight):
                 self.particle_weights.pop(i)
                 self.particles.pop(i)

@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import math
-from particleFilter4 import particleFilter
+from particleFilter5 import particleFilter
 from randomWalk import randomWalk
 
 
@@ -11,6 +11,7 @@ def main():
     np.random.seed(1)
 
     trueState = np.zeros((4,1))
+    trueState[0,0] = -1
     pf = particleFilter(dt)
     xnoise = randomWalk(dt)
     ynoise = randomWalk(dt)
@@ -47,7 +48,7 @@ def main():
 
 def calc_input(t):
     throttle = 0.5
-    steering = 0.1
+    steering = 0.03
     u = np.array([[throttle],[steering]])
     return u
 
