@@ -1,6 +1,8 @@
 import numpy as np
 import math
 import matplotlib.pyplot as plt
+import random
+from scipy.stats import wasserstein_distance
 
 class particleFilter(object):
 
@@ -10,14 +12,23 @@ class particleFilter(object):
         self.pmin = 50
         self.pmax = 100
         #weight is going ot be out of 100. pruned when weight goes below 3.
-        self.prune_weight = -1.0
+        self.prune_weight = 0.5
         self.particles = []
         self.particle_weights =[]
         self.hpx = []
         self.hpy = []
+        self.particle_distr_dist = []
+        self.particle_distr_head = []
+
+        self.dist_distr = [random.gauss(0, 0.8) for _ in range(1000)]
+        self.head_distr = [random.gauss(0,0.1) for _ in range(1000)]
+        #counts, bins = np.histogram(points, bins = 30)
+
         for i in range(0,self.pmax):
             self.hpx.append([])
             self.hpy.append([])
+            self.particle_distr_dist.append([])
+            self.particle_distr_head.append([])
             self.particles.append(np.zeros((4,1)))
             self.particle_weights.append(1)
         self.num_particles = 100
@@ -31,6 +42,7 @@ class particleFilter(object):
             self.particles[i] = self.motion_model(self.particles[i], myu)
             self.hpx[i].append(self.particles[i][0,0])
             self.hpy[i].append(self.particles[i][1,0])
+        self.update_dist(obs)
         #then, reassign weights in relation to the observation
         self.assign_weights(obs)
         #then, prune
@@ -40,10 +52,9 @@ class particleFilter(object):
             self.repopulate()
         #then, return final value.
         state = np.zeros((4,1))
-        w = self.normalizeWeights()
         for i in range(0,self.num_particles):
             for j in range(0,4):
-                state[j,0] = state[j,0]+self.particles[i][j,0]*w[i]
+                state[j,0] = state[j,0]+self.particles[i][j,0]*self.particle_weights[i]
         for i in range(0,4):
             state[i,0] = state[i,0]/100
         
@@ -59,12 +70,23 @@ class particleFilter(object):
 
         return state
     
+    def update_dist(self,obs):
+        for i in range(0, self.num_particles):
+            distance = math.sqrt(self.particles[i][0,0]**2+self.particles[i][1,0]**2)
+            self.particle_distr_dist[i].append(distance)
+            self.particle_distr_head[i].append(self.particles[i][2,0]-obs[2,0])
+            if(len(self.particle_distr_dist[i])>100):
+                self.particle_distr_dist[i].pop(0)
+                self.particle_distr_head[i].pop(0)
+            
 
     def repopulate(self):
         for i in range(0,self.num_particles):
-            while(self.particle_weights[i]>1):
-                self.particle_weights[i] = self.particle_weights[i]-1
-                self.particle_weights.append(1)
+            while(self.particle_weights[i]>2):
+                self.particle_weights[i] = self.particle_weights[i]-2
+                self.particle_weights.append(2)
+                self.particle_distr_dist.append(self.particle_distr_dist[i].copy())
+                self.particle_distr_head.append(self.particle_distr_head[i].copy())
 
                 self.particles.append(np.array([[self.particles[i][0,0]],[self.particles[i][1,0]],[self.particles[i][2,0]],[self.particles[i][3,0]]]))
                 self.hpx.append(self.hpx[i].copy())
@@ -73,17 +95,16 @@ class particleFilter(object):
 
     def assign_weights(self, obs):
         for i in range(0,self.num_particles):
-            distance = math.sqrt(self.particles[i][0,0]**2+self.particles[i][1,0]**2)
-            self.particle_weights[i] = self.particle_weights[i]-0.5+(0.8*self.computeLiklihood(distance, 0.8)+0.2*self.computeLiklihood( self.particles[i][2,0]-obs[2,0], 0.1))
+            self.particle_weights[i] = 0.8/wasserstein_distance(self.particle_distr_dist[i], self.dist_distr)+0.2/wasserstein_distance(self.particle_distr_head[i], self.head_distr)
+        self.normalizeWeights()
 
     def normalizeWeights(self):
         total = 0
-        ret = []
         for i in range(0,self.num_particles):
             total = total+self.particle_weights[i]
         for i in range(0,self.num_particles):
-            ret.append(self.particle_weights[i]*100/total)
-        return ret
+            self.particle_weights[i] = self.particle_weights[i]*100/total
+        self.prune_weight = 100/(3*self.num_particles)
 
     def computeLiklihood(self, distance, sigma):
         z = abs(distance)/sigma
@@ -100,7 +121,7 @@ class particleFilter(object):
                 i = i-1
                 self.num_particles = self.num_particles-1
             i = i+1
-        print("NUM_PPARTICLES: " + str(self.num_particles))
+        print("NUM_PARTICLES: " + str(self.num_particles))
     
 
     def motion_model(self, x, u):
@@ -118,3 +139,5 @@ class particleFilter(object):
         f = tau_0*u[0,0]-tau_0*x[3,0]/(omega_0*r_wheel*gamma)
         x[3,0] = x[3,0]+ self.dt*((r_wheel*gamma)/i_wheel)*(f-(x[3,0]*c_1)/(r_wheel*gamma)-c_0)
         return x
+    
+    
