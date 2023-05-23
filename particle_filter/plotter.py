@@ -11,7 +11,7 @@ def main():
     np.random.seed(1)
 
     trueState = np.zeros((4,1))
-    trueState[0,0] = -1
+    trueState[0,0] = 2
     pf = particleFilter(dt)
     xnoise = randomWalk(dt)
     ynoise = randomWalk(dt)
@@ -21,6 +21,8 @@ def main():
     hy = []
     hpfx = []
     hpfy = []
+    tv = []
+    pfv = []
     for x in t:
         time = x
         u = calc_input(time)
@@ -33,17 +35,36 @@ def main():
         hx.append(obs[0,0])
         hy.append(obs[1,0])
         pfstate = pf.update(u, obs, htx, hty)
+        pfv.append(pfstate[3,0])
+        tv.append(trueState[3,0])
         hpfx.append(pfstate[0,0])
         hpfy.append(pfstate[1,0])
 
-    fig = plt.figure()
-    fig.suptitle('Particle Filter', fontsize=20)
-    plt.plot(hx, hy, label='Measurements', color='b', linewidth = 0.1)
-    plt.plot(hpfx, hpfy, label = 'particle filter', color='r', linewidth = 0.3)
-    plt.plot(htx, hty, label = 'true position', color='g', linewidth = 1.5)
-    plt.xlabel('Position x (m)', fontsize=20)
-    plt.ylabel('Position y (m)', fontsize=20)
-    plt.legend()
+    # fig = plt.figure()
+    # fig.suptitle('Particle Filter', fontsize=20)
+    # plt.plot(hx, hy, label='Measurements', color='b', linewidth = 0.1)
+    # plt.plot(hpfx, hpfy, label = 'particle filter', color='r', linewidth = 0.3)
+    # plt.plot(htx, hty, label = 'true position', color='g', linewidth = 1.5)
+    # plt.xlabel('Position x (m)', fontsize=20)
+    # plt.ylabel('Position y (m)', fontsize=20)
+    # plt.legend()
+    # plt.show()
+
+
+    fig,a = plt.subplots(2)
+
+    #a[0].plot(xs, ys, label = 'measurement', color = 'r', linewidth = 1.5)
+    a[0].plot(hx, hy, label = 'measurement', color = 'g', linewidth = 0.1)
+    a[0].plot(htx, hty, label = 'true position', color = 'r', linewidth = 1.5)
+    a[0].plot(hpfx, hpfy,  label = 'Particle Filter', color = 'b', linewidth = 0.3)
+    a[0].set_ylabel('Y Position')
+    a[0].set_xlabel('X Position')
+    a[0].legend()
+    a[1].plot(t, tv, label = 'true velocity', color = 'b', linewidth = 1.5)
+    a[1].plot(t, pfv, label = 'PF velocity', color = 'g', linewidth = 1.5)
+    a[1].legend()
+    a[1].set_xlabel('time')
+    a[1].set_ylabel('velocity')
     plt.show()
 
 def calc_input(t):

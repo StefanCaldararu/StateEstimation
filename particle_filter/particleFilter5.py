@@ -10,7 +10,7 @@ class particleFilter(object):
         self.show_animation = True
         self.dt = dt
         self.pmin = 70
-        self.pmax = 100
+        self.pmax = 300
         #weight is going ot be out of 100. pruned when weight goes below 3.
         self.prune_weight = 0.8
         self.particles = []
@@ -68,7 +68,8 @@ class particleFilter(object):
             plt.cla()
             plt.gcf().canvas.mpl_connect('key_release_event', lambda event: [exit(0) if event.key == 'escape' else None])
             for i in range(0,self.num_particles):
-                plt.plot(self.hpx[i], self.hpy[i], linewidth = self.particle_weights[i]/10)
+                if(i%5 == 0):
+                    plt.plot(self.hpx[i], self.hpy[i], linewidth = self.particle_weights[i]/10)
             plt.plot(htx, hty, label = 'true position', color = 'k', linewidth = 4.0)
             plt.pause(0.0003)
 
@@ -101,7 +102,7 @@ class particleFilter(object):
                 self.particle_distr_head.append(self.particle_distr_head[i].copy())
                 
 
-                self.particles.append(np.array([[self.particles[i][0,0]+random.gauss(0,0.1)],[self.particles[i][1,0]+random.gauss(0,0.1)],[self.particles[i][2,0]],[self.particles[i][3,0]]]))
+                self.particles.append(np.array([[self.particles[i][0,0]+random.gauss(0,0.3)],[self.particles[i][1,0]+random.gauss(0,0.3)],[self.particles[i][2,0]],[self.particles[i][3,0]]]))
                 self.hpx.append(self.hpx[i].copy())
                 self.hpy.append(self.hpy[i].copy())
                 self.num_particles = self.num_particles+1
