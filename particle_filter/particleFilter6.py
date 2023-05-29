@@ -10,7 +10,7 @@ class particleFilter(object):
         self.show_animation = True
         self.dt = dt
         self.pmin = 30
-        self.pmax = 50
+        self.pmax = 100
         #weight is going ot be out of 100. pruned when weight goes below 3.
         self.prune_weight = 0.8
         self.particles = []
@@ -20,8 +20,8 @@ class particleFilter(object):
         self.particle_distr_dist = []
         self.particle_distr_head = []
 
-        self.dist_distr = [abs(random.gauss(0, 0.8)) for _ in range(1000)]
-        self.head_distr = [abs(random.gauss(0,0.1)) for _ in range(1000)]
+        self.dist_distr = [abs(random.gauss(0, 0.8)) for _ in range(100)]
+        self.head_distr = [abs(random.gauss(0,0.1)) for _ in range(100)]
         #counts, bins = np.histogram(points, bins = 30)
 
         for i in range(0,self.pmax):
@@ -31,15 +31,15 @@ class particleFilter(object):
             self.particle_distr_head.append([])
             #self.particles.append(np.zeros((4,1)))
             self.particles.append(np.array([[random.gauss(0,0.8)], [random.gauss(0,0.8)], [0],[0]]))
-            self.particle_weights.append(1)
+            self.particle_weights.append(0.02)
         self.num_particles = self.pmax
         self.old_np = self.num_particles
         self.weights = np.array([0.4, 0.4, 0.2])
-
-        self.red_weight = (100/(self.pmax*1.1))
+        self.timestep = 0
 
     
     def update(self, u, obs, htx, hty):
+        self.timestep = self.timestep+1
         #first, update the motion model
         for i in range(0, self.num_particles):
             myu = np.array([[u[0,0]+np.random.normal(0,0.02)], [u[1,0]+np.random.normal(0,0.02)]])
@@ -49,28 +49,25 @@ class particleFilter(object):
         self.update_dist(obs)
         #then, reassign weights in relation to the observation
         self.assign_weights(obs)
-        #then, prune
-        self.prune()
-        #then, repopulate as necessary,
-        #if(self.num_particles<self.pmin):
-        #    self.repopulate()
-        self.repopulate()
-        self.normalizeWeights()
-        #then, return final value.
+
         state = np.zeros((4,1))
         for i in range(0,self.num_particles):
             for j in range(0,4):
                 state[j,0] = state[j,0]+self.particles[i][j,0]*self.particle_weights[i]
-        for i in range(0,4):
-            state[i,0] = state[i,0]/100
+        if(self.timestep%5 == 0):
+            self.resample()
+        #then, return final value.
         
         if self.show_animation:
             plt.cla()
             plt.gcf().canvas.mpl_connect('key_release_event', lambda event: [exit(0) if event.key == 'escape' else None])
             for i in range(0,self.num_particles):
-                if(i%5 == 0):
-                    plt.plot(self.hpx[i], self.hpy[i], linewidth = self.particle_weights[i]/10)
+                #if(i%1 == 0):
+                plt.plot(self.hpx[i], self.hpy[i], linewidth = self.particle_weights[i]*10)
             plt.plot(htx, hty, label = 'true position', color = 'k', linewidth = 4.0)
+            plt.xlabel("X position")
+            plt.ylabel("Y position")
+            plt.legend()
             plt.pause(0.0003)
 
 
@@ -85,27 +82,45 @@ class particleFilter(object):
             if(len(self.particle_distr_dist[i])>10):
                 self.particle_distr_dist[i].pop(0)
                 self.particle_distr_head[i].pop(0)
-            
 
-    def repopulate(self):
-        if(self.num_particles == self.old_np):
-            self.red_weight = self.red_weight*0.95
-        else:
-            self.red_weight = (100/(self.pmax*1.1))
-            self.old_np = self.num_particles
-            
-        for i in range(0,self.num_particles):
-            while(self.particle_weights[i]>self.red_weight):
-                self.particle_weights[i] = self.particle_weights[i]-self.red_weight/2
-                self.particle_weights.append(self.red_weight/2)
-                self.particle_distr_dist.append(self.particle_distr_dist[i].copy())
-                self.particle_distr_head.append(self.particle_distr_head[i].copy())
+    def resample(self):
+        cumulative_weights = [sum(self.particle_weights[:i+1]) for i in range(self.num_particles)]
+        sampled_points = []
+        for _ in range(self.num_particles):
+            random_num = random.random()  # Generate a random number between 0 and 1
+
+            # Find the interval where the random number falls
+            for i, cum_weight in enumerate(cumulative_weights):
+                if random_num < cum_weight:
+                    sampled_points.append(i)
+                    break
+        already_seen = []
+        new_particles = []
+        new_pdd = []
+        new_pdh = []
+        new_hpx= []
+        new_hpy = []
+        for j in range(0,self.num_particles):
+            i = sampled_points[j]
+            new_pdd.append(self.particle_distr_dist[i].copy())
+            new_pdh.append(self.particle_distr_head[i].copy())
+            new_hpx.append(self.hpx[i].copy())
+            new_hpy.append(self.hpy[i].copy())
+            if i not in already_seen:
+                already_seen.append(i)
+                new_particles.append(self.particles[i].copy())
+            else:
+                new_particles.append(np.array([[self.particles[i][0,0]+random.gauss(0,0.1)],[self.particles[i][1,0]+random.gauss(0,0.1)],[self.particles[i][2,0]],[self.particles[i][3,0]]]))
+        if(len(already_seen)<50):
+            print("Particles Pruned: "+ str(50-len(already_seen)))
+        self.particles = new_particles
+        self.particle_distr_dist = new_pdd
+        self.particle_distr_head = new_pdh
+        self.hpx = new_hpx
+        self.hpy = new_hpy
                 
 
-                self.particles.append(np.array([[self.particles[i][0,0]+random.gauss(0,0.3)],[self.particles[i][1,0]+random.gauss(0,0.3)],[self.particles[i][2,0]],[self.particles[i][3,0]]]))
-                self.hpx.append(self.hpx[i].copy())
-                self.hpy.append(self.hpy[i].copy())
-                self.num_particles = self.num_particles+1
+
 
     def assign_weights(self, obs):
         for i in range(0,self.num_particles):
@@ -117,27 +132,11 @@ class particleFilter(object):
         for i in range(0,self.num_particles):
             total = total+self.particle_weights[i]
         for i in range(0,self.num_particles):
-            self.particle_weights[i] = self.particle_weights[i]*100/total
+            self.particle_weights[i] = self.particle_weights[i]/total
 
     def computeLiklihood(self, distance, sigma):
         z = abs(distance)/sigma
         return 1-0.5*(1+math.erf(z/math.sqrt(2)))
-
-    def prune(self):
-        i = 0
-        self.prune_weight = 50/self.pmax
-
-        while(i<self.num_particles and self.num_particles>self.pmin*0.9):
-            if(self.particle_weights[i]<self.prune_weight):
-                self.particle_weights.pop(i)
-                self.particles.pop(i)
-                self.hpx.pop(i)
-                self.hpy.pop(i)
-                i = i-1
-                self.num_particles = self.num_particles-1
-            i = i+1
-        print("NUM_PARTICLES: " + str(self.num_particles))
-    
 
     def motion_model(self, x, u):
         l = 0.5

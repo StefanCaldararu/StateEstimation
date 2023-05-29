@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import math
-from particleFilter5 import particleFilter
+from particleFilter6 import particleFilter
 from randomWalk import randomWalk
 
 
@@ -29,7 +29,7 @@ def main():
         trueState = motion_model(trueState, u, dt)
         # print("trueState: ")
         # print(trueState)
-        obs = observation(trueState)
+        obs = observation(trueState, xnoise, ynoise)
         htx.append(trueState[0,0])
         hty.append(trueState[1,0])
         hx.append(obs[0,0])
@@ -40,43 +40,43 @@ def main():
         hpfx.append(pfstate[0,0])
         hpfy.append(pfstate[1,0])
 
-    # fig = plt.figure()
-    # fig.suptitle('Particle Filter', fontsize=20)
-    # plt.plot(hx, hy, label='Measurements', color='b', linewidth = 0.1)
-    # plt.plot(hpfx, hpfy, label = 'particle filter', color='r', linewidth = 0.3)
-    # plt.plot(htx, hty, label = 'true position', color='g', linewidth = 1.5)
-    # plt.xlabel('Position x (m)', fontsize=20)
-    # plt.ylabel('Position y (m)', fontsize=20)
-    # plt.legend()
-    # plt.show()
-
-
-    fig,a = plt.subplots(2)
-
-    #a[0].plot(xs, ys, label = 'measurement', color = 'r', linewidth = 1.5)
-    a[0].plot(hx, hy, label = 'measurement', color = 'g', linewidth = 0.1)
-    a[0].plot(htx, hty, label = 'true position', color = 'r', linewidth = 1.5)
-    a[0].plot(hpfx, hpfy,  label = 'Particle Filter', color = 'b', linewidth = 0.3)
-    a[0].set_ylabel('Y Position')
-    a[0].set_xlabel('X Position')
-    a[0].legend()
-    a[1].plot(t, tv, label = 'true velocity', color = 'b', linewidth = 1.5)
-    a[1].plot(t, pfv, label = 'PF velocity', color = 'g', linewidth = 1.5)
-    a[1].legend()
-    a[1].set_xlabel('time')
-    a[1].set_ylabel('velocity')
+    fig = plt.figure()
+    #fig.suptitle('Particle Filter', fontsize=20)
+    plt.plot(hx, hy, label='measurements', color='g', linewidth = 0.3)
+    plt.plot(htx, hty, label = 'true position', color='r', linewidth = 1.5)
+    plt.plot(hpfx, hpfy, label = 'particle filter', color='b', linewidth = 0.3)
+    plt.xlabel('Position x (m)', fontsize=20)
+    plt.ylabel('Position y (m)', fontsize=20)
+    plt.legend()
     plt.show()
+
+
+    # fig,a = plt.subplots(2)
+
+    # #a[0].plot(xs, ys, label = 'measurement', color = 'r', linewidth = 1.5)
+    # a[0].plot(hx, hy, label = 'measurement', color = 'g', linewidth = 0.1)
+    # a[0].plot(htx, hty, label = 'true position', color = 'r', linewidth = 1.5)
+    # a[0].plot(hpfx, hpfy,  label = 'Particle Filter', color = 'b', linewidth = 0.3)
+    # a[0].set_ylabel('Y Position')
+    # a[0].set_xlabel('X Position')
+    # a[0].legend()
+    # a[1].plot(t, tv, label = 'true velocity', color = 'b', linewidth = 1.5)
+    # a[1].plot(t, pfv, label = 'PF velocity', color = 'g', linewidth = 1.5)
+    # a[1].legend()
+    # a[1].set_xlabel('time')
+    # a[1].set_ylabel('velocity')
+    # plt.show()
 
 def calc_input(t):
     throttle = 0.5
-    steering = 0.03
+    steering = 0.1
     u = np.array([[throttle],[steering]])
     return u
 
-def observation(x):
+def observation(x, xnoise, ynoise):
     obs = np.zeros((3,1))
-    obs[0,0] = x[0,0]+np.random.normal(0,0.8)
-    obs[1,0] = x[1,0]+np.random.normal(0,0.8)
+    obs[0,0] = x[0,0]+xnoise.step()#np.random.normal(0,0.8)
+    obs[1,0] = x[1,0]+ynoise.step()#np.random.normal(0,0.8)
     obs[2,0] = x[2,0]+np.random.normal(0,0.1)
     return obs
 
