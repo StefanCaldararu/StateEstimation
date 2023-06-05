@@ -2,39 +2,33 @@ import matplotlib.pyplot as plt
 import numpy as np
 import random
 from scipy.stats import wasserstein_distance
+from randomWalk import randomWalk
 
-def generate_normal_distribution():
-    """
-    Generates a list of 100 points that fit perfectly under a normal distribution
-    with mean 0 and standard deviation 0.8 and plots them.
-    
-    Returns:
-        list: A list of 100 points that fit perfectly under the normal distribution.
-    """
-    # Create an array of 100 equally spaced points between -4 and 4
-    x = np.linspace(-4, 4, 100)
-    # Set the mean and standard deviation
-    mu = 0
-    sigma = 0.8
-    
-    # Generate a list of 100 points sampled from the normal distribution
-    points = [random.gauss(mu, sigma) for _ in range(1000)]
-    
-    counts, bins = np.histogram(points, bins = 30)
-
-    plt.stairs(counts, bins)
-
-    # Plot the x vs y graph
-    #plt.plot(x, points)
-    plt.xlabel('x')
-    plt.ylabel('y')
-    plt.title('Normal Distribution with Mean 0 and Standard Deviation 0.8')
-    plt.show()
-    
-    # Convert the numpy array to a list and return it
-    points = y.tolist()
-    
-    return points
+def get_distance(prevM, v, m):
+        act_a = m-v-prevM
+        pred_a = -prevM*4
+        pred_a = pred_a*0.15*0.016289174978068626
+        # if(abs(pred_a)>0.00875/16):
+        #     pred_a = (pred_a/abs(pred_a))*0.00875/16
+        #want distribution around pred_a... now just generate new values and return
+        new_v = v+act_a#FIXME
+        new_m = m
+        dist = act_a-pred_a
+        return dist, new_m, new_v
 
 
-generate_normal_distribution()
+prevM = 0
+v = 0
+rw = randomWalk(0.1)
+a_s = []
+for i in range(0,100):
+    val, mean, vel = rw.step()
+    #now we have updated the GPS measurement
+    #we want to see what the "prediction" is....
+    prevM = prevM
+    a_diff, prevM, v = get_distance(prevM, v, val)
+    a_s.append(a_diff)
+    print("a_diff at iteration " + str(i) +": " + str(a_diff))
+
+dist_distr = [abs(random.gauss(0, 0.016289174978068626)) for _ in range(100)]
+print(str(wasserstein_distance(a_s, dist_distr)))

@@ -10,7 +10,7 @@ class particleFilter(object):
         self.show_animation = True
         self.dt = dt
         self.pmin = 2
-        self.pmax = 10
+        self.pmax = 100
         #weight is going ot be out of 100. pruned when weight goes below 3.
         self.prune_weight = 0.8
         self.particles = []
@@ -20,8 +20,8 @@ class particleFilter(object):
         self.particle_distr_dist = []
         self.particle_distr_head = []
 
-        self.dist_distr = [abs(random.gauss(0, 0.8)) for _ in range(100)]
-        self.head_distr = [abs(random.gauss(0,0.1)) for _ in range(100)]
+        self.dist_distr = [abs(random.gauss(0, 0.8)) for _ in range(20)]
+        self.head_distr = [abs(random.gauss(0,0.1)) for _ in range(20)]
         #counts, bins = np.histogram(points, bins = 30)
 
         for i in range(0,self.pmax):
@@ -54,7 +54,7 @@ class particleFilter(object):
         for i in range(0,self.num_particles):
             for j in range(0,4):
                 state[j,0] = state[j,0]+self.particles[i][j,0]*self.particle_weights[i]
-        if(self.timestep%5 == 0):
+        if(self.timestep%20 == 0):
             self.resample()
         #then, return final value.
         
@@ -79,7 +79,7 @@ class particleFilter(object):
             distance = math.sqrt((self.particles[i][0,0]-obs[0,0])**2+(self.particles[i][1,0]-obs[1,0])**2)
             self.particle_distr_dist[i].append(distance)
             self.particle_distr_head[i].append(self.particles[i][2,0]-obs[2,0])
-            if(len(self.particle_distr_dist[i])>10):
+            if(len(self.particle_distr_dist[i])>20):
                 self.particle_distr_dist[i].pop(0)
                 self.particle_distr_head[i].pop(0)
 

@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import math
-from particleFilter6 import particleFilter
+from particleFilter7 import particleFilter
 from randomWalk import randomWalk
 
 
@@ -11,7 +11,7 @@ def main():
     np.random.seed(1)
 
     trueState = np.zeros((4,1))
-    trueState[0,0] = 2
+    trueState[0,0] = 0
     pf = particleFilter(dt)
     xnoise = randomWalk(dt)
     ynoise = randomWalk(dt)

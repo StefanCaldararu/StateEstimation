@@ -4,5 +4,6 @@ Different implementations:
 **particleFilter3.py**: Back to v1 (no history), but will use the "likelihood" of this particle, given the normal distribution and the measurement. 
 **particleFilter4.py**: Include weighting from v3, but also have history. Here we will be trying to fit the distribution. Maintain how far off we have been from the measurement, and assign weight based off of our normal distribution, relative to the one we know the noise has...
 **particleFilter5.py**: Here, we have the same weighting (v4), but change the way randomness is added. FOr now, no randomness added to the input, but each particle gets some randomness to the state when it gets repopulated.
-**particleFIlter6.py**: Same as PF5, it's just we have changed the pruning/resampling method. No longer have 2 methods, we just resample at each iteration. We create a distribution from our particles, and then resample randomly based off of this.
+**particleFIlter6.py**: Same as PF5, it's just we have changed the pruning/resampling method. No longer have 2 methods, we just resample every 5 iterations. We create a distribution from our particles, and then resample randomly based off of this.
+**particleFilter7.py**: Change weighting so that it reflects random walk, hopefully...
 **notes for future implementations**: Use RW noise model, get better prune/repopulate strategies that maybe rely on relative weight as opposed to an absolute weight. change where to add randomness. Genetic signature of particles (can have different randomness added at different places). 
