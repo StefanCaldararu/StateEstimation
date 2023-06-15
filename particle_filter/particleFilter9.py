@@ -19,7 +19,7 @@ class particleFilter(object):
         self.particle_distr_y = []
         self.particle_distr_head = []
 
-        self.dist_distr = [random.gauss(0, 0.016289174978068626) for _ in range(20)]
+        self.dist_distr = [random.gauss(0, 0.0015734703785898006) for _ in range(100)]
         self.head_distr = [abs(random.gauss(0,0.1)) for _ in range(20)]
         #counts, bins = np.histogram(points, bins = 30)
 
@@ -87,30 +87,19 @@ class particleFilter(object):
     def update_dist(self,obs):
 
         for i in range(0, self.num_particles):
-            x_dist, self.x_current_noise[i], self.x_current_v[i] = self.get_distance(self.x_current_noise[i], self.x_current_v[i], obs[0,0]-self.particles[i][0,0])
-            y_dist, self.y_current_noise[i], self.y_current_v[i] = self.get_distance(self.y_current_noise[i], self.y_current_v[i], obs[1,0]-self.particles[i][1,0])
-
+            x_dist = abs((obs[0,0]-self.particles[i][0,0])-self.x_current_noise[i])
+            self.x_current_noise[i] = (obs[0,0]-self.particles[i][0,0])
+            y_dist = abs(obs[1,0]-self.particles[i][1,0])-self.y_current_noise[i]
+            self.y_current_noise[i] = obs[1,0]-self.particles[i][1,0]
+            
             self.particle_distr_x[i].append(x_dist)
             self.particle_distr_y[i].append(y_dist)
             self.particle_distr_head[i].append(self.particles[i][2,0]-obs[2,0])
-            if(len(self.particle_distr_x[i])>20):
+            if(len(self.particle_distr_x[i])>100):
                 self.particle_distr_x[i].pop(0)
                 self.particle_distr_y[i].pop(0)
                 self.particle_distr_head[i].pop(0)
 
-    #assume 0 mean
-    #m for measurement, prevM previous measurement, v is the velocity of noise
-    def get_distance(self, prevM, v, m):
-        act_a = m-v-prevM
-        pred_a = -prevM*4
-        pred_a = pred_a*0.15*0.016289174978068626
-        # if(abs(pred_a)>0.00875/16):
-        #     pred_a = (pred_a/abs(pred_a))*0.00875/16
-        #want distribution around pred_a... now just generate new values and return
-        new_v = v+act_a#FIXME
-        new_m = m
-        dist = act_a-pred_a
-        return dist, new_m, new_v
 
     def resample(self):
         cumulative_weights = [sum(self.particle_weights[:i+1]) for i in range(self.num_particles)]

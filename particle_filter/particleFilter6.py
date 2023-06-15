@@ -10,7 +10,7 @@ class particleFilter(object):
         self.show_animation = True
         self.dt = dt
         self.pmin = 2
-        self.pmax = 10
+        self.pmax = 100
         #weight is going ot be out of 100. pruned when weight goes below 3.
         self.prune_weight = 0.8
         self.particles = []
