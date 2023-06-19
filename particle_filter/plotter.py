@@ -1,9 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import math
-from particleFilter9 import particleFilter
+from particleFilter6 import particleFilter
 from randomWalk import randomWalk
-
 
 def main():
     dt = 0.1
