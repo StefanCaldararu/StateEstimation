@@ -1,5 +1,10 @@
-#include <vector>
-#include <deque>
+/* File: particleFilter.i */
+%module particleFilter
+
+%{
+#define SWIG_FILE_WITH_INIT
+#include "particleFilter.h"
+%}
 
 struct state{
     double x;

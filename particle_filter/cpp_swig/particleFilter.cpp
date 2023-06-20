@@ -6,6 +6,7 @@
 particleFilter::particleFilter(){
     dt = 0.1;
     numParticles = 100;
+    //TODO: make the random generator actually be random, not seeded!!
     std::default_random_engine generator;
     std::normal_distribution<double> GPSdistributor(0,0.8);
     std::normal_distribution<double> MAGdistributor(0,0.1);
@@ -135,9 +136,5 @@ state particleFilter::step(input u, observation o){
         resample();
 
     return mystate;
-
-}
-
-particleFilter::~particleFilter(){
 
 }
