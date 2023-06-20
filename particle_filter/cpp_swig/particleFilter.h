@@ -1,4 +1,5 @@
 #include <vector>
+#include <deque>
 
 struct state{
     double x;
@@ -16,7 +17,7 @@ struct observation{
     double theta;
 };
 struct particle{
-    state state;
+    state s;
     double weight;
 };
 
@@ -25,6 +26,7 @@ class particleFilter
     private:
     //timestep
     double dt = 0.1;
+    int time;
     //the number of particles
     int numParticles;
     //the dynamics model for the vehicle (4DOF)
@@ -35,8 +37,8 @@ class particleFilter
     std::vector<double> sampleMAGdist;
 
     //distributions for each of the particles.
-    std::vector<std::vector<double> > GPSdists;
-    std::vector<std::vector<double> > MAGdists;
+    std::vector<std::deque<double> > GPSdists;
+    std::vector<std::deque<double> > MAGdists;
 
     //the states for all of the particels
     std::vector <particle> particles;
@@ -50,15 +52,18 @@ class particleFilter
     //resample the distribution of particles and repopulate likely ones
     void resample();
 
+    //assign weight to particle i
+    void assign_weight(observation o, int i);
+
     //update the distribution for each particle (TODO:or just an individual partclie?)
-    void update(observation o);
+    void update(observation o, int i);
 
     //vehicle parameters
     double l = 0.5;
     double tau_0 = 0.09;
     double omega_0 = 161.185;
     double r_wheel = 0.08451952624;
-    double gamma = 1/3;
+    double gamma = 0.33333333;
     double c_0 = 0.039;
     double c_1 = 1e-4;
     double i_wheel = 1e-3;
