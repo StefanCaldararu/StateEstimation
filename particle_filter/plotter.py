@@ -1,10 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import math
-from particleFilter6 import particleFilter
+from particleFilter10 import particleFilter
 from randomWalk import randomWalk
 
 def main():
+    # random.seed(1)
     dt = 0.1
     t = np.arange(0, 100, dt)
     np.random.seed(1)

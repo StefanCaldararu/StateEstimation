@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 
 class randomWalk(object):
     def __init__(self, dt):
+        np.random.seed(1)
         self.dt = dt
         self.widthOfDistr = 1/4
         self.crntValueOfRndmWalk = 0
