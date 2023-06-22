@@ -1,5 +1,6 @@
 #include <vector>
 #include <deque>
+#include <random>
 
 struct state{
     double x;
@@ -33,8 +34,8 @@ class particleFilter
     state dynamicsModel(state x, input u);
 
     //sample distributions of data for GPS and MAG
-    std::vector<double> sampleGPSdist;
-    std::vector<double> sampleMAGdist;
+    std::deque<double> sampleGPSdist;
+    std::deque<double> sampleMAGdist;
 
     //distributions for each of the particles.
     std::vector<std::deque<double> > GPSdists;
@@ -53,7 +54,7 @@ class particleFilter
     void resample();
 
     //assign weight to particle i
-    void assign_weight(observation o, int i);
+    void assign_weight(int i);
 
     //update the distribution for each particle (TODO:or just an individual partclie?)
     void update(observation o, int i);
@@ -67,7 +68,8 @@ class particleFilter
     double c_0 = 0.039;
     double c_1 = 1e-4;
     double i_wheel = 1e-3;
-
+    //a sort function for our distributions...
+    void sortDist(std::deque<double>& arr);
     public:
         //constructor
         particleFilter();

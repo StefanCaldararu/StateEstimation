@@ -46,9 +46,7 @@ def main():
         tv.append(trueState[3,0])
         hpfx.append(pfstate.x)
         hpfy.append(pfstate.y)
-        print("pfstate: ",pfstate.x, " ", pfstate.y)
-        print("truestate: ", trueState[0,0], " ", trueState[1,0])
-
+        print(pfstate.x, ",",pfstate.y, ",",trueState[0,0], ",",trueState[1,0], ",",obs[0,0], ",",obs[1,0])
     # fig = plt.figure()
     # #fig.suptitle('Particle Filter', fontsize=20)
     # plt.plot(hx, hy, label='measurements', color='g', linewidth = 0.3)
