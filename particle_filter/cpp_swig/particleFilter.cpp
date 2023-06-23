@@ -84,7 +84,6 @@ void particleFilter::sortDist(std::deque<double>& arr) {
     merge(arr, left, right);
 }
 
-
 state particleFilter::dynamicsModel(state x, input u){
     x.x = x.x+cos(x.theta)*dt*x.v;
     x.y = x.y+sin(x.theta)*dt*x.v;
