@@ -11,11 +11,20 @@ __host__ void update_CPU(float ** particles, float** pd_dist, float** pd_head, f
 __host__ void update_GPU(float ** particles, float** pd_dist, float** pd_head, float* d_dist, float* d_head, float* weights, size_t N){}
 
 //When we update each distribution, we append to the end. It is worth noting that a circular buffer is used for each distribution. 
-__host__ void update_dist_CPU(float ** particles, float** pd_dist, float** pd_head, size_t N){
-    
-
+__host__ void update_dist_CPU(float ** particles, float** pd_dist, float** pd_head, size_t N, int dist_len = 100, int current_val, float* obs){
+    for(int i = 0;i<N;i++){
+    //calculate the distance and heading error
+        float dist = sqrt(pow(particles[i][0]-obs[0],2)+pow(particles[i][1]-obs[1],2));
+        float head = 
+    }
 }
-__global__ void update_dist_GPU(float ** particles, float** pd_dist, float** pd_head, size_t N){}
+__global__ void update_dist_GPU(float ** particles, float** pd_dist, float** pd_head, size_t N, int dist_len = 100, int current_val, float* obs){}
+
+//helper function for computing the difference between two angles, modular subtraction
+__host__ __device__ float angle_diff(float head, float ref){
+    //TODO: FIGURE THIS OUT....
+    return 0;
+}
 
 //The resample is where the majority of the memory movement occurs, which is probably the most time-consuming task for this algorithm. This is mostly linear, and only data movement, so should probably only be done on the cpu (but a gpu implementation that does the data movement is also here...)
 __host__ void resample_CPU(float ** particles, float** pd_dist, float** pd_head, float* weights, size_t N){
@@ -96,7 +105,7 @@ __host__ void assign_weights_CPU(float** pd_dist, float** pd_head, float* d_dist
     //normalize the weights
     normalize_weights_CPU(weights, N);
 }
-__global__ void assign_weights_GPU(float** pd_dist, float** pd_head, float* d_dist, float* d_head, float* weights, size_t N){}
+__global__ void assign_weights_GPU(float** pd_dist, float** pd_head, float* d_dist, float* d_head, float* weights, size_t N, int dist_len = 100){}
 
 //Normalize the weights of the N particles. This has a host implementation where everything is done linearly, as well as a GPU implementation where the weights are reduced in parallel, and then the normalization factor is also applied in parallel.
 __host__ void normalize_weights_CPU(float *weights, size_t N){
