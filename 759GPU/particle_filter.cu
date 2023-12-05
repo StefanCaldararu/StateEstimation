@@ -13,7 +13,6 @@ __host__ void update_CPU(float ** particles, float** pd_dist, float** pd_head, f
         //TODO: modify the control a little bit to create particle diversity
         dynamics(particles[i], control, 0.1);
     }
-    printf("MADE IT HERE");
     //update the distance and heading error distributions for each particle
     update_dist_CPU(particles, pd_dist, pd_head, N, 100, timestep%100, obs);
     //assign the weights to each particle
@@ -111,8 +110,8 @@ __host__ void assign_weights_CPU(float** pd_dist, float** pd_head, float* d_dist
         float* pd_dist_i = (float*)malloc(dist_len*sizeof(float));
         float* pd_head_i = (float*)malloc(dist_len*sizeof(float));
         //copy the particle's distance and heading error distributions to the new memory, which will get sorted
-        memcpy(pd_dist_i, pd_dist[i*dist_len], dist_len*sizeof(float));
-        memcpy(pd_head_i, pd_head[i*dist_len], dist_len*sizeof(float));
+        memcpy(pd_dist_i, pd_dist[i], dist_len*sizeof(float));
+        memcpy(pd_head_i, pd_head[i], dist_len*sizeof(float));
         //sort the particle pd's (but only up till the dist_len'th element)
         std::sort(pd_dist_i, pd_dist_i+dist_len);
         std::sort(pd_head_i, pd_head_i+dist_len);
