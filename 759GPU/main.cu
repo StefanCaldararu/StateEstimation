@@ -24,11 +24,12 @@ int main(int argc, char** argv){
     control[1] = 0.2;
     // Assign memory for the PF
     int num_particles = 100;
+    std::normal_distribution<float> loc(0.0, 0.8);
     float ** particles = (float**) malloc(num_particles*sizeof(float*));
     for(int i = 0;i<num_particles;i++){
         particles[i] = (float*) malloc(4*sizeof(float));
-        particles[i][0] = 0.0;
-        particles[i][1] = 0.0;
+        particles[i][0] = loc(gen);
+        particles[i][1] = loc(gen);
         particles[i][2] = 0.0;
         particles[i][3] = 0.0;
     }
