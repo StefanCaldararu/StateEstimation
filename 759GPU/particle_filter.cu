@@ -36,8 +36,22 @@ __host__ void update_CPU(float ** particles, float** pd_dist, float** pd_head, f
 
     timestep += 1;
 }
-__host__ void update_GPU(float ** particles, float** pd_dist, float** pd_head, float* d_dist, float* d_head, float* weights, size_t N){}
+__host__ void update_GPU(float ** particles, float** pd_dist, float** pd_head, float* d_dist, float* d_head, float* weights, size_t N, float* control, float* obs, int & timestep, float* prediction, std::mt19937 gen){
+    //TODO:
+}
 
+__global__ void GPU_kernel(float ** particles, float** pd_dist, float** pd_head, float* d_dist, float* d_head, float* weights, size_t N, float* control, float* obs, int & timestep, float* prediction, std::mt19937 gen, std::normal_distribution<float> dist){
+    //TODO: a lot of this stuff should probably be in shared memory...
+    //Get the thread id
+    int idx = blockIdx.x*blockDim.x+threadIdx.x;
+    //run the dynamics for this particle
+    float* mycontrol = (float*)malloc(2*sizeof(float));
+    mycontrol[0] = control[0]+dist(gen);
+    mycontrol[1] = control[1]+dist(gen);
+    dynamics(particles[idx], mycontrol, 0.1);
+    free(mycontrol);
+
+}
 //When we update each distribution, we append to the end. It is worth noting that a circular buffer is used for each distribution. 
 __host__ void update_dist_CPU(float ** particles, float** pd_dist, float** pd_head, size_t N, int dist_len, int current_val, float* obs){
     for(size_t i = 0;i<N;i++){
@@ -49,7 +63,14 @@ __host__ void update_dist_CPU(float ** particles, float** pd_dist, float** pd_he
         pd_head[i][current_val] = head;
     }
 }
-__global__ void update_dist_GPU(float ** particles, float** pd_dist, float** pd_head, size_t N, int dist_len, int current_val, float* obs){}
+__device__ void update_dist_GPU(float ** particles, float** pd_dist, float** pd_head, size_t N, int dist_len, int current_val, float* obs, int id){
+    //calculate the distance and heading error
+    float dist = sqrt(pow(particles[id][0]-obs[0],2)+pow(particles[id][1]-obs[1],2));
+    float head = angle_diff(particles[id][3], obs[2]);
+    //we want to put this value in at the current_val index
+    pd_dist[id][current_val] = dist;
+    pd_head[id][current_val] = head;
+}
 
 //helper function for computing the difference between two angles, modular subtraction
 __host__ __device__ float angle_diff(float head, float ref){
