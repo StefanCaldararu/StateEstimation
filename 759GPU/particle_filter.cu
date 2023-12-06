@@ -51,6 +51,8 @@ __global__ void GPU_kernel(float ** particles, float** pd_dist, float** pd_head,
     free(mycontrol);
     //update the distance and heading error distributions for this particle
     update_dist_GPU(particles, pd_dist, pd_head, N, 100, timestep%100, obs, idx);
+    //assign the weights to this particle
+
 
 }
 //When we update each distribution, we append to the end. It is worth noting that a circular buffer is used for each distribution. 
@@ -162,7 +164,15 @@ __host__ void assign_weights_CPU(float** pd_dist, float** pd_head, float* d_dist
     //normalize the weights
     normalize_weights_CPU(weights, N);
 }
-__global__ void assign_weights_GPU(float** pd_dist, float** pd_head, float* d_dist, float* d_head, float* weights, size_t N, int dist_len){}
+__device__ void assign_weights_GPU(float** pd_dist, float** pd_head, float* d_dist, float* d_head, float* weights, size_t N, int dist_len, int id){
+    //allocate memory for the particle's distance and heading error distributions
+    float* pd_dist_i = (float*)malloc(dist_len*sizeof(float));
+    float* pd_head_i = (float*)malloc(dist_len*sizeof(float));
+    //copy the particle's distance and heading error distributions to the new memory, which will get sorted
+    memcpy(pd_dist_i, pd_dist[id], dist_len*sizeof(float));
+    memcpy(pd_head_i, pd_head[id], dist_len*sizeof(float));
+    //FIXME: Probably need to do cudamemcpy.... cuda malloc... etc...
+}
 
 //Normalize the weights of the N particles. This has a host implementation where everything is done linearly, as well as a GPU implementation where the weights are reduced in parallel, and then the normalization factor is also applied in parallel.
 __host__ void normalize_weights_CPU(float *weights, size_t N){
