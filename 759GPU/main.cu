@@ -71,6 +71,7 @@ int main(int argc, char** argv){
         obs[2] = state[3] + head(gen);
         //prop the pf
         update_CPU(particles, pd_dist, pd_head, d_dist, d_head, weights, num_particles, control, obs, timestep, prediction, gen);
+        timestep++;
         printf("STATE, %f, %f, %f, %f\n", state[0], state[1], state[2], state[3]);
         printf("OBS, %f, %f, 0, %f\n", obs[0], obs[1], obs[2]);
         printf("PRED, %f, %f, %f, %f\n", prediction[0], prediction[1], prediction[2], prediction[3]);

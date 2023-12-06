@@ -34,7 +34,6 @@ __host__ void update_CPU(float ** particles, float** pd_dist, float** pd_head, f
     if(timestep%5 == 0)
         resample_CPU(particles, pd_dist, pd_head, weights, N);
 
-    timestep += 1;
 }
 __host__ void update_GPU(float ** particles, float** pd_dist, float** pd_head, float* d_dist, float* d_head, float* weights, size_t N, float* control, float* obs, int & timestep, float* prediction, std::mt19937 gen){
     //TODO:
@@ -50,6 +49,8 @@ __global__ void GPU_kernel(float ** particles, float** pd_dist, float** pd_head,
     mycontrol[1] = control[1]+dist(gen);
     dynamics(particles[idx], mycontrol, 0.1);
     free(mycontrol);
+    //update the distance and heading error distributions for this particle
+    update_dist_GPU(particles, pd_dist, pd_head, N, 100, timestep%100, obs, idx);
 
 }
 //When we update each distribution, we append to the end. It is worth noting that a circular buffer is used for each distribution. 
