@@ -5,13 +5,18 @@
 #include <cuda_runtime.h>
 #include <algorithm>
 #include <stdio.h>
-
+#include <random>
 //The overarching update function for the particle filter. 
-__host__ void update_CPU(float ** particles, float** pd_dist, float** pd_head, float* d_dist, float* d_head, float* weights, size_t N, float* control, float* obs, int & timestep, float* prediction){
+__host__ void update_CPU(float ** particles, float** pd_dist, float** pd_head, float* d_dist, float* d_head, float* weights, size_t N, float* control, float* obs, int & timestep, float* prediction, std::mt19937 gen){
+    std::normal_distribution<float> dist(0, 0.02);
     //first, updaet each particle via the motion model
     for(size_t i = 0;i<N;i++){
+        float* mycontrol = (float*)malloc(2*sizeof(float));
+        mycontrol[0] = control[0]+dist(gen);
+        mycontrol[1] = control[1]+dist(gen);
         //TODO: modify the control a little bit to create particle diversity
-        dynamics(particles[i], control, 0.1);
+        dynamics(particles[i], mycontrol, 0.1);
+        free(mycontrol);
     }
     //update the distance and heading error distributions for each particle
     update_dist_CPU(particles, pd_dist, pd_head, N, 100, timestep%100, obs);

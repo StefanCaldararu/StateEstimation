@@ -11,7 +11,7 @@ int main(int argc, char** argv){
     //The random generator
     std::random_device rd;
     std::mt19937 gen(rd());
-    float total_time = 1000.0;
+    float total_time = 20.0;
     float dt = 0.1;
     float time = 0.0;
     float * state = (float*) malloc(4*sizeof(float));
@@ -69,10 +69,10 @@ int main(int argc, char** argv){
         obs[1] = state[1] + dist(gen);
         obs[2] = state[3] + head(gen);
         //prop the pf
-        update_CPU(particles, pd_dist, pd_head, d_dist, d_head, weights, num_particles, control, obs, timestep, prediction);
+        update_CPU(particles, pd_dist, pd_head, d_dist, d_head, weights, num_particles, control, obs, timestep, prediction, gen);
         printf("STATE, %f, %f, %f, %f\n", state[0], state[1], state[2], state[3]);
-        // printf("OBS, %f, %f, 0, %f\n", obs[0], obs[1], obs[2]);
-        // printf("PRED, %f, %f, %f, %f\n", prediction[0], prediction[1], prediction[2], prediction[3]);
+        printf("OBS, %f, %f, 0, %f\n", obs[0], obs[1], obs[2]);
+        printf("PRED, %f, %f, %f, %f\n", prediction[0], prediction[1], prediction[2], prediction[3]);
 
     }
     free(state);
