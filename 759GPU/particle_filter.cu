@@ -48,16 +48,35 @@ __global__ void GPU_kernel(float ** particles, float** pd_dist, float** pd_head,
     //Get the thread id
     int idx = blockIdx.x*blockDim.x+threadIdx.x;
     //run the dynamics for this particle
-    float* mycontrol = (float*)malloc(2*sizeof(float));
+    //allocate control with cuda memory
+    float* mycontrol;
+    cudaMalloc(&mycontrol, 2*sizeof(float));
     mycontrol[0] = control[0]+dist(gen);
     mycontrol[1] = control[1]+dist(gen);
     dynamics(particles[idx], mycontrol, 0.1);
-    free(mycontrol);
+    cudaFree(mycontrol);
     //update the distance and heading error distributions for this particle
     update_dist_GPU(particles, pd_dist, pd_head, N, 100, timestep%100, obs, idx);
     //assign the weights to this particle
-
-
+    assign_weights_GPU(pd_dist, pd_head, d_dist, d_head, weights, N, 100, idx);
+    //compute the prediction, but only one thread. This is done linearly, although it could probably be done as a reduction...
+    if(idx == 0){
+        for(size_t i = 0;i<4;i++){
+            prediction[i] = 0;
+        }
+        for(size_t i = 0;i<N;i++){
+            for(size_t j = 0;j<4;j++){
+                prediction[j] += particles[i][j]*weights[i];
+            }
+        }
+    }
+    //sync the threads
+    __syncthreads();
+    //resample if necessary
+    if(timestep%5 == 0)
+        resample_GPU(particles, pd_dist, pd_head, weights, N, idx);
+    //sync the threads
+    __syncthreads();
 }
 //When we update each distribution, we append to the end. It is worth noting that a circular buffer is used for each distribution. 
 __host__ void update_dist_CPU(float ** particles, float** pd_dist, float** pd_head, size_t N, int dist_len, int current_val, float* obs){
@@ -134,7 +153,7 @@ __host__ void resample_CPU(float ** particles, float** pd_dist, float** pd_head,
     free(particles_old);
 }
 
-__device__ void resample_GPU(float ** particles, float** pd_dist, float** pd_head, float* weights, size_t N){
+__device__ void resample_GPU(float ** particles, float** pd_dist, float** pd_head, float* weights, size_t N, int id){
     float *particle_old, *pd_dist_old, *pd_head_old;
     //choose a random number between 0 and 1
     float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
@@ -156,9 +175,9 @@ __device__ void resample_GPU(float ** particles, float** pd_dist, float** pd_hea
     //sync the threads, so that we don't have any issues with the memory
     __syncthreads();
     //copy the old particle and its distributions to the new memory
-    cudaMemcpy(particles[threadIdx.x], particle_old, 4*sizeof(float), cudaMemcpyDeviceToDevice);
-    cudaMemcpy(pd_dist[threadIdx.x], pd_dist_old, 100*sizeof(float), cudaMemcpyDeviceToDevice);
-    cudaMemcpy(pd_head[threadIdx.x], pd_head_old, 100*sizeof(float), cudaMemcpyDeviceToDevice);
+    cudaMemcpy(particles[id], particle_old, 4*sizeof(float), cudaMemcpyDeviceToDevice);
+    cudaMemcpy(pd_dist[id], pd_dist_old, 100*sizeof(float), cudaMemcpyDeviceToDevice);
+    cudaMemcpy(pd_head[id], pd_head_old, 100*sizeof(float), cudaMemcpyDeviceToDevice);
     //sync threads
     __syncthreads();
     //free the memory used
@@ -222,6 +241,8 @@ __device__ void assign_weights_GPU(float** pd_dist, float** pd_head, float* d_di
     //free the memory used
     cudaFree(pd_dist_i);
     cudaFree(pd_head_i);
+    //normalize the weights
+    normalize_weights_GPU(weights, N, id);
 }
 
 //Normalize the weights of the N particles. This has a host implementation where everything is done linearly, as well as a GPU implementation where the weights are reduced in parallel, and then the normalization factor is also applied in parallel.
@@ -234,13 +255,13 @@ __host__ void normalize_weights_CPU(float *weights, size_t N){
         weights[i] /= total;
     }
 }
-__device__ void normalize_weights_GPU(float *weights, size_t N){
+__device__ void normalize_weights_GPU(float *weights, size_t N, int id){
     //first sync the threads here
     __syncthreads();
     //reduce the weights to total, each thread does this because we aren't using shared memory... probably better to only do this once and write to shared memory, but this is easier for now.
     float total = thrust::reduce(thrust::device, weights, weights+N, 0.0f, thrust::plus<float>());
     //divide each weight by the total
-    weights[threadIdx.x] /= total;
+    weights[id] /= total;
     //sync the threads again
     __syncthreads();
 } 
