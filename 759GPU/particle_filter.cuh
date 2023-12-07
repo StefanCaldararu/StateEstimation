@@ -24,6 +24,6 @@ __device__ void assign_weights_GPU(float** pd_dist, float** pd_head, float* d_di
 
 //Normalize the weights of the N particles. This has a host implementation where everything is done linearly, as well as a GPU implementation where the weights are reduced in parallel, and then the normalization factor is also applied in parallel.
 __host__ void normalize_weights_CPU(float *weights, size_t N);
-__global__ void normalize_weights_GPU(float *weights, size_t N); 
+__device__ void normalize_weights_GPU(float *weights, size_t N); 
 
 #endif
