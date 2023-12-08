@@ -10,8 +10,12 @@
 #include <thrust/sort.h>
 //include thrust reduce
 #include <thrust/reduce.h>
+//include cuda random
+#include <curand.h>
 //The overarching update function for the particle filter. 
 __host__ void update_CPU(float ** particles, float** pd_dist, float** pd_head, float* d_dist, float* d_head, float* weights, size_t N, float* control, float* obs, int & timestep, float* prediction, std::mt19937 gen){
+    //create a cuda random number generator
+
     std::normal_distribution<float> dist(0, 0.02);
     //first, updaet each particle via the motion model
     for(size_t i = 0;i<N;i++){
@@ -154,7 +158,8 @@ __host__ void resample_CPU(float ** particles, float** pd_dist, float** pd_head,
 }
 
 __device__ void resample_GPU(float ** particles, float** pd_dist, float** pd_head, float* weights, size_t N, int id){
-    float *particle_old, *pd_dist_old, *pd_head_old;
+    float particle_old[4], pd_dist_old[100], pd_head_old[100];
+
     //choose a random number between 0 and 1
     float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
     //find the particle that corresponds to this random number
@@ -165,25 +170,24 @@ __device__ void resample_GPU(float ** particles, float** pd_dist, float** pd_hea
         current_cum_weight += weights[index];
     }
     //allocate memory for the old particle and its distributions
-    cudaMalloc(&particle_old, 4*sizeof(float));
-    cudaMalloc(&pd_dist_old, 100*sizeof(float));
-    cudaMalloc(&pd_head_old, 100*sizeof(float));
-    //copy the old particle and its distributions to the new memory
-    cudaMemcpy(particle_old, particles[index], 4*sizeof(float), cudaMemcpyDeviceToDevice);
-    cudaMemcpy(pd_dist_old, pd_dist[index], 100*sizeof(float), cudaMemcpyDeviceToDevice);
-    cudaMemcpy(pd_head_old, pd_head[index], 100*sizeof(float), cudaMemcpyDeviceToDevice);
+    for(int i = 0;i<4;i++)
+        particle_old[i] = particles[id][i];
+    for(int i = 0;i<100;i++){
+        pd_dist_old[i] = pd_dist[id][i];
+        pd_head_old[i] = pd_head[id][i];
+    }
+
     //sync the threads, so that we don't have any issues with the memory
     __syncthreads();
     //copy the old particle and its distributions to the new memory
-    cudaMemcpy(particles[id], particle_old, 4*sizeof(float), cudaMemcpyDeviceToDevice);
-    cudaMemcpy(pd_dist[id], pd_dist_old, 100*sizeof(float), cudaMemcpyDeviceToDevice);
-    cudaMemcpy(pd_head[id], pd_head_old, 100*sizeof(float), cudaMemcpyDeviceToDevice);
+    for(int i = 0;i<4;i++)
+        particles[id][i] = particle_old[i];
+    for(int i = 0;i<100;i++){
+        pd_dist[id][i] = pd_dist_old[i];
+        pd_head[id][i] = pd_head_old[i];
+    }
     //sync threads
     __syncthreads();
-    //free the memory used
-    cudaFree(particle_old);
-    cudaFree(pd_dist_old);
-    cudaFree(pd_head_old);
 }
 
 //Assign the weights of the N particles. This is done by sorting the particle distance and heading error distributions, and then summing the difference to the defined sample distribution. This is a reduction of the EMD. This can be done either on the CPU or GPU. For the GPU, we only do parallelization at the particle level here. This is then expanded to parallelization for the sort and reduce steps in helper kernels.
@@ -220,15 +224,15 @@ __host__ void assign_weights_CPU(float** pd_dist, float** pd_head, float* d_dist
 }
 __device__ void assign_weights_GPU(float** pd_dist, float** pd_head, float* d_dist, float* d_head, float* weights, size_t N, int dist_len, int id){
     //allocate memory for the particle's distance and heading error distributions
-    float* pd_dist_i, *pd_head_i;
-    cudaMalloc(&pd_dist_i, dist_len*sizeof(float));
-    cudaMalloc(&pd_head_i, dist_len*sizeof(float));
+    float pd_dist_i[100], pd_head_i[100];
     //copy the particle's distance and heading error distributions to the new memory, which will get sorted
-    cudaMemcpy(pd_dist_i, pd_dist[id], dist_len*sizeof(float), cudaMemcpyDeviceToDevice);
-    cudaMemcpy(pd_head_i, pd_head[id], dist_len*sizeof(float), cudaMemcpyDeviceToDevice);
+    for(int i = 0;i<dist_len;i++){
+        pd_dist_i[i] = pd_dist[id][i];
+        pd_head_i[i] = pd_head[id][i];
+    }
     //sort the particle pd's (but only up till the dist_len'th element)
-    thrust::sort(thrust::device, pd_dist_i, pd_dist_i+dist_len);
-    thrust::sort(thrust::device, pd_head_i, pd_head_i+dist_len);
+    thrust::sort(thrust::device, pd_dist_i, pd_dist_i+100);
+    thrust::sort(thrust::device, pd_head_i, pd_head_i+100);
     //use thrust reduce to sum the difference between the sample distribution and the particle distribution for the distance and heading error
     float w1 = thrust::reduce(thrust::device, pd_dist_i, pd_dist_i+dist_len, 0.0f, thrust::plus<float>());
     float w2 = thrust::reduce(thrust::device, pd_head_i, pd_head_i+dist_len, 0.0f, thrust::plus<float>());
@@ -238,9 +242,6 @@ __device__ void assign_weights_GPU(float** pd_dist, float** pd_head, float* d_di
         w2 = 0.0001;
     //sum the two weights (weighted though), and assign to the particle
     weights[id] = 0.9/w1+0.1/w2;
-    //free the memory used
-    cudaFree(pd_dist_i);
-    cudaFree(pd_head_i);
     //normalize the weights
     normalize_weights_GPU(weights, N, id);
 }
