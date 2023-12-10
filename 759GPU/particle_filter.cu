@@ -47,7 +47,7 @@ __host__ void update_GPU(float ** particles, float** pd_dist, float** pd_head, f
     //TODO:
 }
 
-__global__ void GPU_kernel(float ** particles, float** pd_dist, float** pd_head, float* d_dist, float* d_head, float* weights, size_t N, float* control, float* obs, int & timestep, float* prediction, std::mt19937 gen, std::normal_distribution<float> dist){
+__global__ void GPU_kernel(float ** particles, float** pd_dist, float** pd_head, float* d_dist, float* d_head, float* weights, size_t N, float* control, float* obs, int & timestep, float* prediction, float** ran_control, float* ran){
     //TODO: a lot of this stuff should probably be in shared memory...
     //Get the thread id
     int idx = blockIdx.x*blockDim.x+threadIdx.x;
@@ -55,8 +55,8 @@ __global__ void GPU_kernel(float ** particles, float** pd_dist, float** pd_head,
     //allocate control with cuda memory
     float* mycontrol;
     cudaMalloc(&mycontrol, 2*sizeof(float));
-    mycontrol[0] = control[0]+dist(gen);
-    mycontrol[1] = control[1]+dist(gen);
+    mycontrol[0] = control[0]+ran_control[idx][0];
+    mycontrol[1] = control[1]+ran_control[idx][1];
     dynamics(particles[idx], mycontrol, 0.1);
     cudaFree(mycontrol);
     //update the distance and heading error distributions for this particle
@@ -78,7 +78,7 @@ __global__ void GPU_kernel(float ** particles, float** pd_dist, float** pd_head,
     __syncthreads();
     //resample if necessary
     if(timestep%5 == 0)
-        resample_GPU(particles, pd_dist, pd_head, weights, N, idx);
+        resample_GPU(particles, pd_dist, pd_head, weights, N, idx, ran);
     //sync the threads
     __syncthreads();
 }
@@ -157,11 +157,11 @@ __host__ void resample_CPU(float ** particles, float** pd_dist, float** pd_head,
     free(particles_old);
 }
 
-__device__ void resample_GPU(float ** particles, float** pd_dist, float** pd_head, float* weights, size_t N, int id){
+__device__ void resample_GPU(float ** particles, float** pd_dist, float** pd_head, float* weights, size_t N, int id, float* ran){
     float particle_old[4], pd_dist_old[100], pd_head_old[100];
 
-    //choose a random number between 0 and 1
-    float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+    //get our random number between 0 and 1
+    float r = ran[id];
     //find the particle that corresponds to this random number
     float current_cum_weight = weights[0];
     int index = 0;
